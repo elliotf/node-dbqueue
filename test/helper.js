@@ -31,13 +31,12 @@ before(function(done) {
 
 beforeEach(function(done) {
   var tables = [
-    'jobs',
-    'queues'
+    'jobs'
   ];
 
   Promise
     .map(tables, function(table) {
-      knex
+      return knex
         .del()
         .from(table);
     })

@@ -18,6 +18,7 @@ exports.up = function(knex, Promise) {
   todo.push(knex.schema.createTable('jobs', function(table) {
     table.bigIncrements('id').notNull();
     table.string('job_type').nullable();
+    table.string('locked_by').nullable();
     table.text('data').nullable();
   }));
 
