@@ -1,3 +1,4 @@
+var uuid   = require('uuid');
 var helper = require('./helper');
 var Queue  = require('../');
 var db     = helper.knex;
@@ -62,12 +63,14 @@ describe('Queue', function() {
 
     beforeEach(function() {
       queue = new Queue(db);
+
+      this.sinon.stub(uuid, 'v4').returns('1b144294-fdf2-11e4-8664-0021cccb0e75');
     });
 
     context('when there are no jobs', function() {
       it('yields null', function(done) {
         queue
-          .acquire('example worker identifier')
+          .acquire()
           .asCallback(function(err, job) {
             expect(err).to.not.exist();
 
@@ -120,7 +123,7 @@ describe('Queue', function() {
 
       it('marks a job as being claimed', function(done) {
         queue
-          .acquire('example worker identifier')
+          .acquire()
           .asCallback(function(err, job) {
             expect(err).to.not.exist();
 
@@ -132,6 +135,9 @@ describe('Queue', function() {
                 expect(err).to.not.exist();
 
                 expect(actual).to.be.an('array');
+
+                expect(job).to.deep.equal(actual[1]);
+
                 actual.forEach(function(row) {
                   expect(row.id).to.be.a('number');
                   delete row.id;
@@ -146,7 +152,7 @@ describe('Queue', function() {
                   {
                     data:      '{"example": "job 1"}',
                     job_type:  'example job type',
-                    locked_by: 'example worker identifier'
+                    locked_by: '1b144294-fdf2-11e4-8664-0021cccb0e75'
                   },
                   {
                     data:      '{"example": "job 2"}',
@@ -154,8 +160,6 @@ describe('Queue', function() {
                     locked_by: null
                   }
                 ]);
-
-                expect(job.data).to.deep.equal(actual[1].data);
 
                 done();
               });
