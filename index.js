@@ -4,7 +4,8 @@ function Queue(db) {
 
 Queue.prototype.enqueue = function(job_type, data) {
   var row = {
-    data:        JSON.stringify(data)
+    data:     JSON.stringify(data),
+    job_type: job_type
   };
 
   return this.db

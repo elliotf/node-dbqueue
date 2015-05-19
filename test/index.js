@@ -21,24 +21,27 @@ describe('Queue', function() {
       };
 
       queue
-        .enqueue('queue_name', job_data)
+        .enqueue('job type here', job_data)
         .asCallback(function(err) {
           expect(err).to.not.exist();
 
           db
-            .select('*')
+            .select()
             .from('jobs')
-            .asCallback(function(err, rows) {
+            .asCallback(function(err, jobs) {
               expect(err).to.not.exist();
 
-              expect(rows).to.have.length(1);
+              expect(jobs).to.have.length(1);
 
-              expect(rows).to.deep.equal([
+              expect(jobs).to.deep.equal([
                 {
-                  id:   rows[0].id,
-                  data: '{"example":"job metadata"}'
+                  id:       jobs[0].id,
+                  job_type: 'job type here',
+                  data:     '{"example":"job metadata"}'
                 }
               ]);
+
+              expect(jobs[0].id).to.be.a('number');
 
               done();
             });
