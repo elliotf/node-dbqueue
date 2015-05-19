@@ -48,27 +48,9 @@ describe('Queue', function() {
       });
     });
 
-    context('when the job type does not exist', function() {
-    });
-
-    context('when the job type already exists', function() {
-    });
-
     context.skip('when provided a transaction', function() {
       it('uses the transaction to insert the row', function(done) {
       });
     });
-  });
-
-  describe('#dequeue', function() {
-    // pull a job off the queue
-    // mark it as taken by a worker
-    context('when a job type is provided', function() {
-    });
-  });
-
-  describe('#requeue', function() {
-    // if a worker chooses to stop working on a job
-    // surrender it back to the queue
   });
 });
