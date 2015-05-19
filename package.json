@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "test": "make test"
+  },
+  "devDependencies": {
+    "chai": "2.3.0",
+    "dirty-chai": "^1.2.1",
+    "knex": "0.8.5",
+    "mocha": "2.2.5",
+    "mocha-sinon": "1.1.4",
+    "sinon": "1.14.1",
+    "sinon-chai": "^2.7.0"
+  },
+  "dependencies": {
+    "uuid": "^2.0.1"
+  }
+}
