@@ -14,6 +14,7 @@
 exports.up = function(knex, Promise) {
   return knex.schema.createTable('jobs', function(table) {
     table.bigIncrements('id').notNull();
+    table.text('data').nullable();
   });
 };
 
