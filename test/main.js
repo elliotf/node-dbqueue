@@ -44,7 +44,7 @@ describe('DBQueue', function() {
     });
   });
 
-  describe('#push', function() {
+  describe('#insert', function() {
     var queue;
 
     beforeEach(function(done) {
@@ -57,8 +57,8 @@ describe('DBQueue', function() {
       });
     });
 
-    it('pushes a message onto the queue', function(done) {
-      queue.push('waffles', '{"example":"message data"}', function(err) {
+    it('inserts a message onto the queue', function(done) {
+      queue.insert('waffles', '{"example":"message data"}', function(err) {
         expect(err).to.not.exist();
 
         db.query('SELECT * FROM jobs', function(err, rows) {
@@ -80,7 +80,7 @@ describe('DBQueue', function() {
     });
   });
 
-  describe('#pop', function() {
+  describe('#consume', function() {
     var queue;
 
     beforeEach(function(done) {
@@ -98,7 +98,7 @@ describe('DBQueue', function() {
         var todo = [];
 
         todo.push(function(done) {
-          queue.push('queue_a', 'fake data for a', function(err) {
+          queue.insert('queue_a', 'fake data for a', function(err) {
             expect(err).to.not.exist();
 
             return done();
@@ -106,7 +106,7 @@ describe('DBQueue', function() {
         });
 
         todo.push(function(done) {
-          queue.push('queue_b', 'fake data for b', function(err) {
+          queue.insert('queue_b', 'fake data for b', function(err) {
             expect(err).to.not.exist();
 
             return done();
@@ -121,7 +121,7 @@ describe('DBQueue', function() {
       });
 
       it('returns a job from the queue', function(done) {
-        queue.pop('queue_a', function(err, job) {
+        queue.consume('queue_a', function(err, job) {
           expect(err).to.not.exist();
           expect(withoutTimestamps(job)).to.deep.equal({
             queue:  'queue_a',
@@ -134,12 +134,12 @@ describe('DBQueue', function() {
       });
 
       it('gives a job out only once', function(done) {
-        queue.pop('queue_a', function(err, job) {
+        queue.consume('queue_a', function(err, job) {
           expect(err).to.not.exist();
 
           expect(job).to.exist();
 
-          queue.pop('queue_a', function(err, job) {
+          queue.consume('queue_a', function(err, job) {
             expect(err).to.not.exist();
 
             expect(job).to.be.undefined();
@@ -151,17 +151,17 @@ describe('DBQueue', function() {
 
       context('and more than one queue is specified', function() {
         it('returns jobs from any of the specified queues', function(done) {
-          queue.pop(['queue_a','queue_b'], function(err, job) {
+          queue.consume(['queue_a','queue_b'], function(err, job) {
             expect(err).to.not.exist();
 
             expect(job).to.exist();
 
-            queue.pop(['queue_a','queue_b'], function(err, job) {
+            queue.consume(['queue_a','queue_b'], function(err, job) {
               expect(err).to.not.exist();
 
               expect(job).to.exist();
 
-              queue.pop(['queue_a','queue_b'], function(err, job) {
+              queue.consume(['queue_a','queue_b'], function(err, job) {
                 expect(err).to.not.exist();
                 expect(job).to.not.exist();
 
@@ -175,7 +175,7 @@ describe('DBQueue', function() {
 
     context('when the desired queue is empty', function() {
       it('returns nothing', function(done) {
-        queue.pop('queue_a', function(err, job) {
+        queue.consume('queue_a', function(err, job) {
           expect(err).to.not.exist();
 
           expect(job).to.not.exist();
@@ -187,7 +187,7 @@ describe('DBQueue', function() {
 
     context('when the desired queue does not exist', function() {
       it('returns nothing', function(done) {
-        queue.pop('queue_c', function(err, job) {
+        queue.consume('queue_c', function(err, job) {
           expect(err).to.not.exist();
           expect(job).to.not.exist();
 
