@@ -108,7 +108,22 @@ DBQueue.prototype.consume = function(queue_input, done) {
           return done(err);
         }
 
-        return done(null, rows[0]);
+        var job = rows[0];
+        function finished(done) {
+          var remove_job_sql = ""
+            + " DELETE FROM jobs"
+            + " WHERE id = ?"
+            ;
+          db.query(remove_job_sql, [job.id], function(err, result) {
+            if (err) {
+              return done(err);
+            }
+
+            done();
+          });
+        }
+
+        return done(null, job, finished);
       });
     });
   });

@@ -20,6 +20,7 @@ var chai   = require('chai');
 var expect = exports.expect = chai.expect;
 chai.use(require('dirty-chai'));
 chai.use(require('sinon-chai'));
+chai.use(require('chai-datetime'));
 chai.config.includeStack = true;
 
 require('mocha-sinon');

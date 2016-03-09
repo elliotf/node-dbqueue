@@ -149,6 +149,21 @@ describe('DBQueue', function() {
         });
       });
 
+      it('leaves the job on the queue with an updated lock time', function(done) {
+        queue.consume('queue_a', function(err, job) {
+          expect(err).to.not.exist();
+
+          db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
+            expect(err).to.not.exist();
+
+            expect(rows).to.have.length(1);
+            expect(rows[0].locked_until).to.be.afterTime(new Date());
+
+            return done();
+          });
+        });
+      });
+
       context('and more than one queue is specified', function() {
         it('returns jobs from any of the specified queues', function(done) {
           queue.consume(['queue_a','queue_b'], function(err, job) {
@@ -164,6 +179,28 @@ describe('DBQueue', function() {
               queue.consume(['queue_a','queue_b'], function(err, job) {
                 expect(err).to.not.exist();
                 expect(job).to.not.exist();
+
+                return done();
+              });
+            });
+          });
+        });
+      });
+
+      context('and the job completion callback is called', function() {
+        it('removes the job from the queue', function(done) {
+          queue.consume('queue_a', function(err, job, finished) {
+            expect(err).to.not.exist();
+
+            expect(finished).to.be.a('function');
+
+            finished(function(err) {
+              expect(err).to.not.exist();
+
+              db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
+                expect(err).to.not.exist();
+
+                expect(rows).to.have.length(0);
 
                 return done();
               });
