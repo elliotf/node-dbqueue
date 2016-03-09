@@ -21,8 +21,7 @@ DBQueue.connect = function(options, done) {
   return done(null, queue);
 };
 
-
-DBQueue.prototype.push = function(queue_name, data, done) {
+DBQueue.prototype.insert = function(queue_name, data, done) {
   var self = this;
   var db   = this.db;
 
@@ -39,7 +38,7 @@ DBQueue.prototype.push = function(queue_name, data, done) {
   });
 };
 
-DBQueue.prototype.pop = function(queue_input, done) {
+DBQueue.prototype.consume = function(queue_input, done) {
   var db        = this.db;
   var worker_id = this.worker
   var self      = this;
