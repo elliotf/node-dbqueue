@@ -5,7 +5,7 @@ A simple job queue that has priorities other than speed and scalability, inspire
 
 See usage in the tests, or see below example:
 
-```
+```javascript
 var DBQueue = require('dbqueue');
 
 // use the included schema.sql to initialize the DB schema
