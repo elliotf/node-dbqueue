@@ -9,7 +9,7 @@
     "url": "git://github.com/elliotf/node-dbqueue.git"
   },
   "scripts": {
-    "test": "NODE_ENV=test mocha --check-leaks --recursive -R dot test"
+    "test": "NODE_ENV=test mocha --check-leaks --recursive test"
   },
   "keywords": [
     "database",

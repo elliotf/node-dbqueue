@@ -279,4 +279,80 @@ describe('DBQueue', function() {
       });
     });
   });
+
+  describe('#size', function() {
+    var queue;
+
+    beforeEach(function(done) {
+      DBQueue.connect(helper.test_db_config, function(err, result) {
+        expect(err).to.not.exist();
+
+        queue = result;
+
+        return done();
+      });
+    });
+
+    context('when there aren\'t any jobs', function() {
+      it('returns 0', function(done) {
+        queue.size('queue_a', function(err, count) {
+          expect(err).to.not.exist();
+
+          expect(count).to.equal(0);
+
+          return done();
+        });
+      });
+    });
+
+    context('when there are jobs', function() {
+      beforeEach(function(done) {
+        var todo = [];
+
+        todo.push(function(done) {
+          queue.insert('queue_a', 'fake data for a', function(err) {
+            expect(err).to.not.exist();
+
+            return done();
+          });
+        });
+
+        todo.push(function(done) {
+          queue.insert('queue_b', 'fake data for b', function(err) {
+            expect(err).to.not.exist();
+
+            return done();
+          });
+        });
+
+        async.parallel(todo, function(err) {
+          expect(err).to.not.exist();
+
+          return done();
+        });
+      });
+
+      it('returns the number of jobs in the queue', function(done) {
+        queue.size('queue_a', function(err, count) {
+          expect(err).to.not.exist();
+
+          expect(count).to.equal(1);
+
+          return done();
+        });
+      });
+
+      context('when multiple queues are requested', function() {
+        it('returns the total number of jobs across the queues', function(done) {
+          queue.size(['queue_a', 'queue_b'], function(err, count) {
+            expect(err).to.not.exist();
+
+            expect(count).to.equal(2);
+
+            return done();
+          });
+        });
+      });
+    });
+  });
 });

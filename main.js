@@ -131,4 +131,27 @@ DBQueue.prototype.consume = function(queue_input, done) {
   });
 };
 
+DBQueue.prototype.size = function(queue_input, done) {
+  var db          = this.db;
+  var queue_names = queue_input instanceof Array ? queue_input : [queue_input];
+  var queue_ph    = queue_names.map(function() {
+    return '?';
+  }).join(',');
+
+  var total_jobs_sql = ""
+    + " SELECT COUNT(1) AS total"
+    + " FROM jobs"
+    + " WHERE queue IN (" + queue_ph + ")"
+    ;
+  db.query(total_jobs_sql, queue_names, function(err, rows) {
+    if (err) {
+      return done(err);
+    }
+
+    var count = rows[0].total;
+
+    return done(null, count);
+  });
+};
+
 module.exports = DBQueue;
