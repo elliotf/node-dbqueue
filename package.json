@@ -1,8 +1,25 @@
 {
+  "name": "dbqueue",
+  "version": "0.0.1",
+  "description": "A minimal, durable DB-based message queue system",
+  "homepage": "https://github.com/elliotf/node-dbqueue",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/elliotf/node-dbqueue.git"
+  },
   "scripts": {
     "test": "NODE_ENV=test mocha --check-leaks --recursive -R dot test"
   },
+  "keywords": [
+    "database",
+    "job",
+    "queue",
+    "job queue",
+    "message",
+    "bus",
+    "message bus"
+  ],
   "dependencies": {
     "mysql": "^2.10.2",
     "uuid": "^2.0.1"
@@ -18,5 +35,11 @@
     "nodemon": "^1.9.1",
     "sinon": "^1.17.3",
     "sinon-chai": "^2.8.0"
-  }
+  },
+  "author": {
+    "name": "Elliot Foster",
+    "web": "https://github.com/elliotf"
+  },
+  "license": "MIT",
+  "readmeFilename": "README.md"
 }
