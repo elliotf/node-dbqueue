@@ -207,6 +207,52 @@ describe('DBQueue', function() {
             });
           });
         });
+
+        context('more than once', function() {
+          it('removes the job from the queue without error', function(done) {
+            queue.consume('queue_a', function(err, job, finished) {
+              expect(err).to.not.exist();
+
+              expect(finished).to.be.a('function');
+
+              finished();
+
+              finished(function(err) {
+                expect(err).to.not.exist();
+
+                db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
+                  expect(err).to.not.exist();
+
+                  expect(rows).to.have.length(0);
+
+                  return done();
+                });
+              });
+            });
+          });
+        });
+
+        context('without a callback', function() {
+          it('removes the job from the queue without error', function(done) {
+            queue.consume('queue_a', function(err, job, finished) {
+              expect(err).to.not.exist();
+
+              expect(finished).to.be.a('function');
+
+              finished();
+
+              setTimeout(function() {
+                db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
+                  expect(err).to.not.exist();
+
+                  expect(rows).to.have.length(0);
+
+                  return done();
+                });
+              }, 100);
+            });
+          });
+        });
       });
     });
 

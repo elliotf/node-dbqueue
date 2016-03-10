@@ -119,7 +119,9 @@ DBQueue.prototype.consume = function(queue_input, done) {
               return done(err);
             }
 
-            done();
+            if (done instanceof Function) {
+              done();
+            }
           });
         }
 
