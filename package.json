@@ -1,6 +1,6 @@
 {
   "name": "dbqueue",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "A minimal, durable DB-based message queue system",
   "homepage": "https://github.com/elliotf/node-dbqueue",
   "main": "main.js",
@@ -21,7 +21,7 @@
     "message bus"
   ],
   "dependencies": {
-    "mysql": "^2.10.2",
+    "mysql2": "^1.0.0-rc.5",
     "uuid": "^2.0.1"
   },
   "devDependencies": {

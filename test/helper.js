@@ -25,7 +25,7 @@ chai.config.includeStack = true;
 
 require('mocha-sinon');
 
-var mysql = require('mysql');
+var mysql = require('mysql2');
 
 exports.test_db_config = {
   host:             '127.0.0.1',
