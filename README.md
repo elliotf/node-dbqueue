@@ -13,7 +13,9 @@ var DBQueue = require('dbqueue');
 var queue_options = {
   // node-mysql compatible DB settings
   host:             '127.0.0.1',
+  port:             3306, // optional, defaults to 3306
   user:             'root',
+  table_name:       'custom_jobs_table', // optional, defaults to `jobs`
   password:         '',
   database:         'dbqueue_testing_db',
 };
