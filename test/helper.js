@@ -39,23 +39,47 @@ var db = exports.test_db = mysql.createPool(exports.test_db_config);
 
 before(function(done) {
   // init the DB schema
-  db.query("SHOW TABLES LIKE 'jobs'", function(err, rows, fields) {
-    expect(err).to.not.exist();
+  var table_schema;
 
-    if (rows.length) {
-      return done();
-    }
+  function createTable(table_name, done) {
+    var sql = table_schema.replace('CREATE TABLE jobs', 'CREATE TABLE ' + table_name);
 
-    fs.readFile(__dirname + '/../schema.sql', function(err, buffer) {
+    return db.query(sql, function(err) {
       expect(err).to.not.exist();
 
-      var sql = buffer.toString();
+      done();
+    });
+  }
 
-      db.query(sql, function(err) {
+  function lazilyCreateTable(table_name, done) {
+    db.query("SHOW TABLES LIKE '" + table_name + "'", function(err, rows, fields) {
+      expect(err).to.not.exist();
+
+      if (rows.length) {
+        return done();
+      }
+
+      if (table_schema) {
+        return createTable(table_name, done);
+      }
+
+      fs.readFile(__dirname + '/../schema.sql', function(err, buffer) {
         expect(err).to.not.exist();
 
-        return done();
+        table_schema = buffer.toString();
+
+        return createTable(table_name, done);
       });
+    });
+  }
+
+  lazilyCreateTable('jobs', function(err) {
+    expect(err).to.not.exist();
+
+    return lazilyCreateTable('custom_jobs_table', function(err) {
+      expect(err).to.not.exist();
+
+      return done();
     });
   });
 });
@@ -64,7 +88,11 @@ beforeEach(function(done) {
   db.query('DELETE FROM jobs', function(err, rows, fields) {
     expect(err).to.not.exist();
 
-    return done();
+    db.query('DELETE FROM custom_jobs_table', function(err, rows, fields) {
+      expect(err).to.not.exist();
+
+      return done();
+    });
   });
 });
 

@@ -5,6 +5,7 @@ var uuid  = require('uuid');
 
 function DBQueue(attrs) {
   this.db     = attrs.db;
+  this.table  = attrs.table || 'jobs';
   this.worker = uuid.v4();
 }
 
@@ -15,21 +16,23 @@ DBQueue.connect = function(options, done) {
   });
 
   var queue   = new DBQueue({
-    db: pool,
+    db:    pool,
+    table: options.table_name,
   });
 
   return done(null, queue);
 };
 
 DBQueue.prototype.insert = function(queue_name, data, done) {
-  var self = this;
-  var db   = this.db;
+  var self  = this;
+  var db    = this.db;
+  var table = this.table;
 
   var sql = ""
-    + " INSERT INTO jobs (queue, data, worker, create_time, update_time)"
+    + " INSERT INTO ?? (queue, data, worker, create_time, update_time)"
     + " VALUES (?, ?, 'unassigned', NOW(), NOW())"
     ;
-  db.query(sql, [queue_name, data], function(err, rows, fields) {
+  db.query(sql, [table, queue_name, data], function(err, rows, fields) {
     if (err) {
       return done(err);
     }
@@ -40,24 +43,20 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
 
 DBQueue.prototype.consume = function(queue_input, done) {
   var db        = this.db;
+  var table     = this.table;
   var worker_id = this.worker
   var self      = this;
   var lock_time = 60 * 15;
 
-  var queue_names = queue_input instanceof Array ? queue_input : [queue_input];
-  var queue_ph    = queue_names.map(function() {
-    return '?';
-  }).join(',');
-
   var free_job_ids_sql = ""
     + " SELECT *"
-    + " FROM jobs"
+    + " FROM ??"
     + " WHERE locked_until < NOW()"
-    + " AND queue IN (" + queue_ph + ")"
+    + " AND queue IN (?)"
     + " ORDER BY RAND()"
     + " LIMIT 1" // eventually query/update batches to be easier on the DB
     ;
-  db.query(free_job_ids_sql, queue_names, function(err, rows) {
+  db.query(free_job_ids_sql, [table, queue_input], function(err, rows) {
     if (err) {
       return done(err);
     }
@@ -70,40 +69,30 @@ DBQueue.prototype.consume = function(queue_input, done) {
       return row.id;
     });
 
-    var placeholder_string = rows.map(function() {
-      return '?';
-    }).join(',');
-
     var reserve_jobs_sql = ""
-      + " UPDATE jobs"
+      + " UPDATE ??"
       + " SET"
       + "   worker = ?"
       + "   , locked_until = (NOW() + INTERVAL ? SECOND)"
       + "   , update_time = NOW()"
-      + " WHERE id IN ("
-      + placeholder_string
-      + " )"
+      + " WHERE id IN (?)"
       + " AND locked_until < NOW()"
       + " LIMIT 1"
       ;
 
-    var values = Array.prototype.concat.apply([worker_id, lock_time], job_ids);
-    db.query(reserve_jobs_sql, values, function(err, result) {
+    db.query(reserve_jobs_sql, [table, worker_id, lock_time, job_ids], function(err, result) {
       if (err) {
         return done(err);
       }
 
       var find_reserved_jobs_sql = ""
         + " SELECT *"
-        + " FROM jobs"
-        + " WHERE id IN ("
-        + placeholder_string
-        + " )"
+        + " FROM ??"
+        + " WHERE id IN (?)"
         + " AND worker = ?"
         ;
 
-      var values = Array.prototype.concat.apply(job_ids, [worker_id]);
-      db.query(find_reserved_jobs_sql, values, function(err, rows) {
+      db.query(find_reserved_jobs_sql, [table, job_ids, worker_id], function(err, rows) {
         if (err) {
           return done(err);
         }
@@ -132,18 +121,15 @@ DBQueue.prototype.consume = function(queue_input, done) {
 };
 
 DBQueue.prototype.size = function(queue_input, done) {
-  var db          = this.db;
-  var queue_names = queue_input instanceof Array ? queue_input : [queue_input];
-  var queue_ph    = queue_names.map(function() {
-    return '?';
-  }).join(',');
+  var db    = this.db;
+  var table = this.table;
 
   var total_jobs_sql = ""
     + " SELECT COUNT(1) AS total"
-    + " FROM jobs"
-    + " WHERE queue IN (" + queue_ph + ")"
+    + " FROM ??"
+    + " WHERE queue IN (?)"
     ;
-  db.query(total_jobs_sql, queue_names, function(err, rows) {
+  db.query(total_jobs_sql, [table, queue_input], function(err, rows) {
     if (err) {
       return done(err);
     }

@@ -72,7 +72,7 @@ describe('DBQueue', function() {
               queue:         'waffles',
               worker:        'unassigned',
             }
-          ])
+          ]);
 
           return done();
         });
@@ -350,6 +350,61 @@ describe('DBQueue', function() {
             expect(count).to.equal(2);
 
             return done();
+          });
+        });
+      });
+    });
+  });
+
+  describe('integration tests', function() {
+    describe('custom table name', function() {
+      var queue;
+
+      beforeEach(function(done) {
+        uuid.v4.returns('fake_uuid_for_custom_table');
+        var custom_config = _.extend({}, helper.test_db_config, {
+          table_name: 'custom_jobs_table',
+        });
+        DBQueue.connect(custom_config, function(err, result) {
+          expect(err).to.not.exist();
+
+          queue = result;
+
+          return done();
+        });
+      });
+
+      context('when provided a custom table name', function() {
+        it('uses the provided table name', function(done) {
+          queue.insert('custom_table_queue', 'fake data for custom table queue', function(err) {
+            expect(err).to.not.exist();
+
+            queue.size('custom_table_queue', function(err, size) {
+              expect(err).to.not.exist();
+
+              expect(size).to.equal(1);
+
+              db.query('SELECT * FROM jobs', function(err, rows) {
+                expect(err).to.not.exist();
+
+                expect(rows).to.deep.equal([]);
+
+                db.query('SELECT * FROM custom_jobs_table', function(err, rows) {
+                  expect(err).to.not.exist();
+
+                  expect(rows).to.have.length(1);
+
+                  queue.consume('custom_table_queue', function(err, job, completionCallback) {
+                    expect(err).to.not.exist();
+
+                    expect(job).to.exist();
+                    expect(job.data).to.equal('fake data for custom table queue');
+
+                    return done();
+                  });
+                });
+              });
+            });
           });
         });
       });
