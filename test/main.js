@@ -24,8 +24,6 @@ describe('DBQueue', function() {
     queue_options = {
     };
 
-    fake_uuid = 'fakeuuid-0000-1111-2222-333333333333';
-    this.sinon.stub(uuid, 'v4').returns(fake_uuid)
   });
 
   it('can be instantiated', function() {
@@ -121,13 +119,12 @@ describe('DBQueue', function() {
       });
 
       it('returns a job from the queue', function(done) {
+        fake_uuid = 'fakeuuid-0000-1111-2222-333333333333';
+        this.sinon.stub(uuid, 'v4').returns(fake_uuid)
+
         queue.consume('queue_a', function(err, job) {
           expect(err).to.not.exist();
-          expect(withoutTimestamps(job)).to.deep.equal({
-            queue:  'queue_a',
-            data:   'fake data for a',
-            worker: 'fakeuuid-0000-1111-2222-333333333333',
-          });
+          expect(job).to.deep.equal('fake data for a');
 
           return done();
         });
@@ -194,7 +191,7 @@ describe('DBQueue', function() {
 
             expect(finished).to.be.a('function');
 
-            finished(function(err) {
+            finished(null, function(err) {
               expect(err).to.not.exist();
 
               db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
@@ -217,13 +214,33 @@ describe('DBQueue', function() {
 
               finished();
 
-              finished(function(err) {
+              finished(null, function(err) {
                 expect(err).to.not.exist();
 
                 db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
                   expect(err).to.not.exist();
 
                   expect(rows).to.have.length(0);
+
+                  return done();
+                });
+              });
+            });
+          });
+        });
+
+        context('with an error', function() {
+          it('leaves the job on the queue', function(done) {
+            queue.consume('queue_a', function(err, job, finishedWithJob) {
+              expect(err).to.not.exist();
+
+              finishedWithJob(new Error('fake error'), function(err) {
+                expect(err).to.not.exist();
+
+                db.query('SELECT * FROM jobs WHERE queue = ?', ['queue_a'], function(err, rows) {
+                  expect(err).to.not.exist();
+
+                  expect(rows).to.have.length(1);
 
                   return done();
                 });
@@ -249,8 +266,40 @@ describe('DBQueue', function() {
 
                   return done();
                 });
-              }, 100);
+              }, 50);
             });
+          });
+        });
+      });
+    });
+
+    context('when there is more than one job', function() {
+      beforeEach(function(done) {
+        queue.insert('queue_a', 'first', function(err) {
+          expect(err).to.not.exist();
+
+          queue.insert('queue_a', 'second', function(err) {
+            expect(err).to.not.exist();
+
+            return done();
+          });
+        });
+      });
+
+      it('returns each one', function(done) {
+        queue.consume('queue_a', function(err, first) {
+          expect(err).to.not.exist();
+
+          expect(first).to.exist();
+
+          queue.consume('queue_a', function(err, second) {
+            expect(err).to.not.exist();
+
+            expect(second).to.exist();
+
+            expect(second).to.not.deep.equal(first);
+
+            return done();
           });
         });
       });
@@ -275,6 +324,26 @@ describe('DBQueue', function() {
           expect(job).to.not.exist();
 
           return done();
+        });
+      });
+    });
+
+    context('when all of the jobs are locked', function() {
+      it('returns nothing', function(done) {
+        queue.insert('queue_a', 'some data', function(err) {
+          expect(err).to.not.exist();
+
+          queue.consume('queue_a', function(err, job) {
+            expect(err).to.not.exist();
+
+            queue.consume('queue_a', function(err, job) {
+              expect(err).to.not.exist();
+
+              expect(job).to.not.exist();
+
+              return done();
+            });
+          });
         });
       });
     });
@@ -361,7 +430,6 @@ describe('DBQueue', function() {
       var queue;
 
       beforeEach(function(done) {
-        uuid.v4.returns('fake_uuid_for_custom_table');
         var custom_config = _.extend({}, helper.test_db_config, {
           table_name: 'custom_jobs_table',
         });
@@ -398,7 +466,7 @@ describe('DBQueue', function() {
                     expect(err).to.not.exist();
 
                     expect(job).to.exist();
-                    expect(job.data).to.equal('fake data for custom table queue');
+                    expect(job).to.equal('fake data for custom table queue');
 
                     return done();
                   });

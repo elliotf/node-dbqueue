@@ -44,61 +44,61 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
 DBQueue.prototype.consume = function(queue_input, done) {
   var db        = this.db;
   var table     = this.table;
-  var worker_id = this.worker
+  var worker_id = uuid.v4();
   var self      = this;
-  var lock_time = 60 * 15;
+  var lock_time = 60 * 5;
 
-  var free_job_ids_sql = ""
-    + " SELECT *"
-    + " FROM ??"
-    + " WHERE locked_until < NOW()"
-    + " AND queue IN (?)"
-    + " ORDER BY RAND()"
-    + " LIMIT 1" // eventually query/update batches to be easier on the DB
-    ;
-  db.query(free_job_ids_sql, [table, queue_input], function(err, rows) {
+  db.query("SELECT NOW() AS now, NOW() + INTERVAL ? SECOND AS lock_until", [lock_time], function(err, result) {
     if (err) {
       return done(err);
     }
 
-    if (!rows.length) {
-      return done();
-    }
-
-    var job_ids = rows.map(function(row) {
-      return row.id;
-    });
+    var now        = result[0].now;
+    var lock_until = result[0].lock_until;
 
     var reserve_jobs_sql = ""
       + " UPDATE ??"
       + " SET"
       + "   worker = ?"
-      + "   , locked_until = (NOW() + INTERVAL ? SECOND)"
-      + "   , update_time = NOW()"
-      + " WHERE id IN (?)"
-      + " AND locked_until < NOW()"
+      + "   , locked_until = ?"
+      + "   , update_time = ?"
+      + " WHERE locked_until < ?"
+      + " AND queue IN (?)"
       + " LIMIT 1"
       ;
 
-    db.query(reserve_jobs_sql, [table, worker_id, lock_time, job_ids], function(err, result) {
+    db.query(reserve_jobs_sql, [table, worker_id, lock_until, now, now, queue_input], function(err, result) {
       if (err) {
         return done(err);
+      }
+
+      if (!result.affectedRows) {
+        return done();
       }
 
       var find_reserved_jobs_sql = ""
         + " SELECT *"
         + " FROM ??"
-        + " WHERE id IN (?)"
-        + " AND worker = ?"
+        + " WHERE worker = ?"
+        + " AND locked_until = ?"
         ;
 
-      db.query(find_reserved_jobs_sql, [table, job_ids, worker_id], function(err, rows) {
+      db.query(find_reserved_jobs_sql, [table, worker_id, lock_until], function(err, rows) {
         if (err) {
           return done(err);
         }
 
         var job = rows[0];
-        function finished(done) {
+
+        function finishedWithJob(err, done) {
+          if (!(done instanceof Function)) {
+            done = function() {};
+          }
+
+          if (err) {
+            return done();
+          }
+
           var remove_job_sql = ""
             + " DELETE FROM jobs"
             + " WHERE id = ?"
@@ -108,13 +108,11 @@ DBQueue.prototype.consume = function(queue_input, done) {
               return done(err);
             }
 
-            if (done instanceof Function) {
-              done();
-            }
+            done();
           });
         }
 
-        return done(null, job, finished);
+        return done(null, job.data, finishedWithJob);
       });
     });
   });
