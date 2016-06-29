@@ -8,10 +8,6 @@ var DBQueue = require('../');
 var uuid    = require('uuid');
 var db      = helper.test_db;
 
-function userFacingJob(job_row) {
-  return _.pick(job_row, 'category', 'data');
-}
-
 function withoutTimestamps(job_row) {
   return _.omit(job_row, 'create_time', 'update_time', 'id', 'locked_until');
 }
