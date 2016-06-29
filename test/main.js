@@ -67,6 +67,28 @@ describe('DBQueue', function() {
         });
       });
     });
+
+    context('when called on a newly instantiated object', function() {
+      var queue;
+
+      beforeEach(function() {
+        queue = new DBQueue(helper.test_db_config);
+      });
+
+      it('lazily connects to the datastore', function(done) {
+        queue.insert('waffles', '{"example":"message data"}', function(err) {
+          expect(err).to.not.exist();
+
+          db.query('SELECT * FROM jobs', function(err, rows) {
+            expect(err).to.not.exist();
+
+            expect(rows).to.have.length(1);
+
+            return done();
+          });
+        });
+      });
+    });
   });
 
   describe('#consume', function() {

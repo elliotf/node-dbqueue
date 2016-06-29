@@ -4,23 +4,27 @@ var mysql = require('mysql2');
 var uuid  = require('uuid');
 
 function DBQueue(attrs) {
-  this.db     = attrs.db;
-  this.table  = attrs.table || 'jobs';
+  this.table  = attrs.table_name || 'jobs';
   this.worker = uuid.v4();
-}
 
-DBQueue.connect = function(options, done) {
-  var pool = mysql.createPool(options);
+  var pool = mysql.createPool(attrs);
   pool.on('connection', function(conn) {
     conn.query('SET sql_mode="STRICT_ALL_TABLES"', [])
   });
 
-  var queue   = new DBQueue({
-    db:    pool,
-    table: options.table_name,
-  });
+  this.db = pool;
+}
 
-  return done(null, queue);
+DBQueue.connect = function(options, done) {
+  var queue   = new DBQueue(options);
+
+  queue.db.query("SELECT NOW()", function(err, result) {
+    if (err) {
+      return done(err);
+    }
+
+    return done(null, queue);
+  });
 };
 
 DBQueue.prototype.insert = function(queue_name, data, done) {
