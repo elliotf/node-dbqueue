@@ -52,10 +52,11 @@ DBQueue.connect(queue_options, function(err, queue) {
     // do something with said job data
 
     // then let the queue know the job has been handled
-    finished();
+    // passing an err to the finished callback will leave the job on the queue
+    finished(some_err);
 
-    // if you would like to get confirmation that the job has been cleared from the queue:
-    finished(function(err) {
+    // or if you would like to get confirmation that the job has been cleared from the queue:
+    finished(null, function(err) {
       if (err) {
         // job is likely still on the queue
       }
