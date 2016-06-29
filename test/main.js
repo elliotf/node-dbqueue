@@ -17,22 +17,13 @@ function withoutTimestamps(job_row) {
 }
 
 describe('DBQueue', function() {
-  var queue_options;
-  var fake_uuid;
-
-  beforeEach(function() {
-    queue_options = {
-    };
-
-  });
-
   it('can be instantiated', function() {
     var queue = new DBQueue({});
   });
 
   describe('.connect', function() {
     it('returns a DBQueue instance', function(done) {
-      DBQueue.connect(queue_options, function(err, queue) {
+      DBQueue.connect(helper.test_db_config, function(err, queue) {
         expect(err).to.not.exist();
 
         expect(queue).to.be.an.instanceof(DBQueue);
@@ -119,7 +110,7 @@ describe('DBQueue', function() {
       });
 
       it('returns a job from the queue', function(done) {
-        fake_uuid = 'fakeuuid-0000-1111-2222-333333333333';
+        var fake_uuid = 'fakeuuid-0000-1111-2222-333333333333';
         this.sinon.stub(uuid, 'v4').returns(fake_uuid)
 
         queue.consume('queue_a', function(err, job) {
