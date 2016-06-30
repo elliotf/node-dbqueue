@@ -29,9 +29,11 @@
     "chai": "^3.5.0",
     "chai-datetime": "^1.4.1",
     "dirty-chai": "^1.2.2",
+    "js-yaml": "^3.6.1",
     "lodash": "^4.6.1",
     "mocha": "^2.4.5",
     "mocha-sinon": "^1.1.5",
+    "msgpack": "^1.0.2",
     "nodemon": "^1.9.1",
     "sinon": "^1.17.3",
     "sinon-chai": "^2.8.0"

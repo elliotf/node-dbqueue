@@ -1,9 +1,11 @@
 # DBQueue
-A simple job queue that has priorities other than speed and scalability, inspired by TheSchwartz
+A simple job queue that prioritizes infrastructural simplicity and common requirements over speed and scalability, inspired by TheSchwartz
 
 # Usage
 
 See usage in the tests, or see below example:
+
+## Overview
 
 ```javascript
 var DBQueue = require('dbqueue');
@@ -66,14 +68,114 @@ DBQueue.connect(queue_options, function(err, queue) {
 
 ```
 
+## Connecting
+
+Connect asynchronously to discover connectivity issues as soon as possible:
+```javascript
+var queue_options = {
+  // options as above
+};
+
+DBQueue.connect(queue_options, function(err, queue) {
+  if (err) {
+    // likely a DB connection error
+  }
+
+  // start using queue
+});
+```
+
+Connect lazily for less boilerplate
+```javascript
+var queue_options = {
+  // options as above
+};
+
+var queue = new DBQueue(queue_options);
+
+// start using queue, if there is a connection problem all queries are going to fail
+```
+
+## Inserting messages into the queue
+
+```javascript
+var queue_name   = 'example queue';
+var message_data = { example: 'message data' };
+
+queue.insert(queue_name, message_data, function(err) {
+  // message_data is serialized to JSON by default
+});
+```
+
+## Consuming messages from the queue
+
+Message consumption currently reserves the message for five minutes.  If the message is not ACK'ed within that time, the message may be processed by another worker.
+
+A customizable reservation time is a forthcoming feature.
+
+```javascript
+var queue_name   = 'example queue';
+queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
+  // handle potential error
+  // message data is thawed JSON by default
+  // message data may be NULL if there are no available jobs on the queue
+});
+```
+
+### ACK'ing and NACK'ing messages
+
+Calling the ackMessageCallback without an error will remove it from the queue.
+
+Calling the ackMessageCallback with an error will leave it on the queue to be processed again after some time.
+
+Not calling the ackMessageCallback will leave it on the queue to be processed again after some time.
+
+```javascript
+var queue_name = 'example queue';
+queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
+  // handle potential error
+
+  // do something with the message, calling ackMessageCallback with the result
+  // if ackMessageCallback is called with an error, the message is left on the queue
+  // if the ackMessageCallback is not called, the message is left on the queue
+
+  doSomethingWithMessage(message_data, function(err) {
+    ackMessageCallback(err, function(err) {
+      // handle potential error
+      // callback to message ACK is optional, in case confirmation of message removal from queue is desired
+    });
+  });
+});
+```
+
+## Custom serialization
+
+In case you would like something other than JSON.stringify and JSON.parse for serialization, provide your own serialization methods.
+
+Note that binary formats are currently not supported.
+
+```javascript
+var yaml = require('js-yaml');
+
+var queue_options = {
+  // ... options as before
+  serializer:       yaml.dump,
+  deserializer:     yaml.load,
+};
+
+var queue = new DBQueue(queue_options);
+```
+
 # When this might be a useful library
-* When you don't want to introduce another dependency for simple/trivial functionality
-* When you need a durable queue
+* You don't want to introduce another dependency for simple/trivial functionality
+* You need a simple, durable queue
+* You are okay with at least once semantics
+* You would like message deferral without dead letter queue complexity
 
 # When this is NOT the solution for you
-* You need guarantees that a job will be delivered once (your jobs are not idempotent)
+* You need guarantees that a job will be delivered once and _only_ once (your jobs are not idempotent)
 * You need near-realtime performance
-* You need to scale to large numbers of jobs
+* You need to scale to large numbers of jobs and/or very high throughput
 
 # Performance improvements
 * fetch batches of jobs rather than one at a time
