@@ -114,12 +114,36 @@ Message consumption currently reserves the message for five minutes.  If the mes
 A customizable reservation time is a forthcoming feature.
 
 ```javascript
-var queue_name   = 'example queue';
+var queue_name = 'example queue';
 queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
   // handle potential error
   // message data is thawed JSON by default
   // message data may be NULL if there are no available jobs on the queue
 });
+```
+
+An optional options object can be provided with the following attributes:
+* count: the number of messages to attempt to consume
+* lock_time: how long to lock the messages in the queue.
+
+```javascript
+var queue_name = 'example queue';
+var options    = {
+  count:     10,
+  lock_time: 60*60, // in seconds, defaults to 300 seconds (five minutes)
+};
+
+function consumer(err, message_data, ackMessageCallback) {
+  // handle potential error
+
+  console.log("message:", message_data);
+
+  ackMessageCallback();
+}
+
+queue.consume(queue_name, options, consumer);
+
+// consumer will be called up to ten times
 ```
 
 ### ACK'ing and NACK'ing messages

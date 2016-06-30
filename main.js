@@ -54,12 +54,24 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
   });
 };
 
-DBQueue.prototype.consume = function(queue_input, done) {
+DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
   var db        = this.db;
   var table     = this.table;
   var worker_id = uuid.v4();
   var self      = this;
-  var lock_time = 60 * 5;
+
+  var options;
+  var done;
+  if (options_input && (typeof done_input === 'function')) {
+    options = options_input;
+    done    = done_input;
+  } else {
+    options = {};
+    done    = options_input;
+  }
+
+  var lock_time = options.lock_time || (60 * 5);
+  var limit     = options.count     || 1;
 
   db.query("SELECT NOW() AS now, NOW() + INTERVAL ? SECOND AS lock_until", [lock_time], function(err, result) {
     if (err) {
@@ -77,10 +89,10 @@ DBQueue.prototype.consume = function(queue_input, done) {
       + "   , update_time = ?"
       + " WHERE locked_until < ?"
       + " AND queue IN (?)"
-      + " LIMIT 1"
+      + " LIMIT ?"
       ;
 
-    db.query(reserve_jobs_sql, [table, worker_id, lock_until, now, now, queue_input], function(err, result) {
+    db.query(reserve_jobs_sql, [table, worker_id, lock_until, now, now, queue_input, limit], function(err, result) {
       if (err) {
         return done(err);
       }
@@ -107,38 +119,38 @@ DBQueue.prototype.consume = function(queue_input, done) {
           return done();
         }
 
-        var job = rows[0];
-
-        function finishedWithJob(err, done) {
-          if (!(done instanceof Function)) {
-            done = function() {};
-          }
-
-          if (err) {
-            return done();
-          }
-
-          var remove_job_sql = ""
-            + " DELETE FROM jobs"
-            + " WHERE id = ?"
-            ;
-          db.query(remove_job_sql, [job.id], function(err, result) {
-            if (err) {
-              return done(err);
+        rows.map(function(job) {
+          function finishedWithJob(err, done) {
+            if (!(done instanceof Function)) {
+              done = function() {};
             }
 
-            done();
-          });
-        }
+            if (err) {
+              return done();
+            }
 
-        var to_return;
-        try {
-          to_return = self.deserializer(job.data);
-        } catch(e) {
-          return done(e);
-        }
+            var remove_job_sql = ""
+              + " DELETE FROM jobs"
+              + " WHERE id = ?"
+              ;
+            db.query(remove_job_sql, [job.id], function(err, result) {
+              if (err) {
+                return done(err);
+              }
 
-        return done(null, to_return, finishedWithJob);
+              done();
+            });
+          }
+
+          var to_return;
+          try {
+            to_return = self.deserializer(job.data);
+          } catch(e) {
+            return done(e);
+          }
+
+          return done(null, to_return, finishedWithJob);
+        });
       });
     });
   });

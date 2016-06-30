@@ -296,7 +296,7 @@ describe('DBQueue', function() {
         });
       });
 
-      it('returns each one', function(done) {
+      it('returns all of them one at a time', function(done) {
         queue.consume('queue_a', function(err, first) {
           expect(err).to.not.exist();
 
@@ -309,7 +309,13 @@ describe('DBQueue', function() {
 
             expect(second).to.not.deep.equal(first);
 
-            return done();
+            queue.consume('queue_a', function(err, last) {
+              expect(err).to.not.exist();
+
+              expect(last).to.not.exist();
+
+              return done();
+            });
           });
         });
       });
@@ -353,6 +359,104 @@ describe('DBQueue', function() {
 
               return done();
             });
+          });
+        });
+      });
+    });
+
+    context('when provided an options object', function() {
+      var options;
+
+      beforeEach(function(done) {
+        options = {
+        };
+
+        queue.insert('a queue', 'message 1', function(err) {
+          expect(err).to.not.exist();
+
+          return done();
+        });
+      });
+
+      context('that has a lock time', function() {
+        beforeEach(function() {
+          var hour_in_seconds = 60 * 60;
+          options.lock_time = hour_in_seconds;
+        });
+
+        it('locks the jobs for that long', function(done) {
+          queue.consume('a queue', options, function(err, job) {
+            expect(err).to.not.exist();
+
+            db.query("SELECT locked_until FROM jobs", function(err, rows) {
+              expect(err).to.not.exist();
+
+              expect(rows).to.have.length(1);
+
+              var minute   = 60*1000;
+              var expected = new Date(Date.now() + (45 * minute));
+              expect(rows[0].locked_until).to.be.afterTime(expected);
+
+              return done();
+            });
+          });
+        });
+      });
+
+      context('that has a count', function() {
+        beforeEach(function(done) {
+          options.count = 2;
+
+          queue.insert('a queue', 'message 2', function(err) {
+            expect(err).to.not.exist();
+
+            queue.insert('a queue', 'message 3', function(err) {
+              expect(err).to.not.exist();
+
+              return done();
+            });
+          });
+        });
+
+        it('calls the job handler that many times', function(done) {
+          var consumer = this.sinon.spy();
+
+          queue.consume('a queue', options, consumer);
+
+          setTimeout(function() {
+            expect(consumer).to.have.been.calledTwice();
+
+            // called without err
+            expect(consumer.args[0][0]).to.not.exist();
+            expect(consumer.args[1][0]).to.not.exist();
+
+            db.query("SELECT locked_until FROM jobs WHERE locked_until > NOW()", function(err, rows) {
+              expect(err).to.not.exist();
+
+              expect(rows).to.have.length(2);
+
+              return done();
+            });
+          }, 10);
+        });
+
+        context('that is greater than the number of messages', function() {
+          it('returns all available messages', function(done) {
+            options.count = 100;
+            var consumer = this.sinon.spy();
+
+            queue.consume('a queue', options, consumer);
+
+            setTimeout(function() {
+              expect(consumer).to.have.been.calledThrice();
+
+              // called without err
+              expect(consumer.args[0][0]).to.not.exist();
+              expect(consumer.args[1][0]).to.not.exist();
+              expect(consumer.args[2][0]).to.not.exist();
+
+              return done();
+            }, 10);
           });
         });
       });
