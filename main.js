@@ -7,6 +7,9 @@ function DBQueue(attrs) {
   this.table  = attrs.table_name || 'jobs';
   this.worker = uuid.v4();
 
+  this.serializer   = attrs.serializer   || JSON.stringify;
+  this.deserializer = attrs.deserializer || JSON.parse;
+
   var pool = mysql.createPool(attrs);
   pool.on('connection', function(conn) {
     conn.query('SET sql_mode="STRICT_ALL_TABLES"', [])
@@ -32,11 +35,17 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
   var db    = this.db;
   var table = this.table;
 
+  var to_store;
+  try {
+    to_store = this.serializer(data);
+  } catch(e) {
+    return done(e);
+  }
   var sql = ""
     + " INSERT INTO ?? (queue, data, worker, create_time, update_time)"
     + " VALUES (?, ?, 'unassigned', NOW(), NOW())"
     ;
-  db.query(sql, [table, queue_name, data], function(err, rows, fields) {
+  db.query(sql, [table, queue_name, to_store], function(err, rows, fields) {
     if (err) {
       return done(err);
     }
@@ -116,7 +125,14 @@ DBQueue.prototype.consume = function(queue_input, done) {
           });
         }
 
-        return done(null, job.data, finishedWithJob);
+        var to_return;
+        try {
+          to_return = self.deserializer(job.data);
+        } catch(e) {
+          return done(e);
+        }
+
+        return done(null, to_return, finishedWithJob);
       });
     });
   });

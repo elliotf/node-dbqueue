@@ -43,7 +43,7 @@ describe('DBQueue', function() {
     });
 
     it('inserts a message onto the queue', function(done) {
-      queue.insert('waffles', '{"example":"message data"}', function(err) {
+      queue.insert('waffles', {example:'message data'}, function(err) {
         expect(err).to.not.exist();
 
         db.query('SELECT * FROM jobs', function(err, rows) {
@@ -480,6 +480,123 @@ describe('DBQueue', function() {
                     return done();
                   });
                 });
+              });
+            });
+          });
+        });
+      });
+    });
+
+    describe('serialization support', function() {
+      context('when provided serializer/deserializer functions', function() {
+        it('uses those functions to serialize/deserialize job data', function(done) {
+          var options = _.extend({}, helper.test_db_config, {
+            serializer: function(data) {
+              return 'fake serialized data';
+            },
+            deserializer: function(str) {
+              return str.split('').reverse().join('');
+            },
+          });
+
+          var queue = new DBQueue(options);
+
+          queue.insert('a queue', { fake: 'job data' }, function(err) {
+            expect(err).to.not.exist();
+
+            db.query('SELECT data FROM jobs', function(err, rows) {
+              expect(err).to.not.exist();
+
+              expect(rows).to.deep.equal([
+                {
+                  data: 'fake serialized data'
+                },
+              ]);
+
+              queue.consume('a queue', function(err, data, ackCallback) {
+                expect(err).to.not.exist();
+
+                expect(data).to.deep.equal('atad dezilaires ekaf');
+
+                return done();
+              });
+            });
+          });
+        });
+      });
+
+      context('when not provided a serializer/deserializer', function() {
+        it('defaults to JSON.stringify/JSON.parse', function(done) {
+          var queue = new DBQueue(helper.test_db_config);
+
+          queue.insert('a queue', { fake: 'job data' }, function(err) {
+            expect(err).to.not.exist();
+
+            db.query('SELECT data FROM jobs', function(err, rows) {
+              expect(err).to.not.exist();
+
+              expect(rows).to.deep.equal([
+                {
+                  data: '{"fake":"job data"}'
+                },
+              ]);
+
+              queue.consume('a queue', function(err, data, ackCallback) {
+                expect(err).to.not.exist();
+
+                expect(data).to.deep.equal({ fake: 'job data' });
+
+                return done();
+              });
+            });
+          });
+        });
+      });
+
+      context('when serialization fails', function() {
+        it('yields an error', function(done) {
+          var options = _.extend({}, helper.test_db_config, {
+            serializer: function(data) {
+              return data.someInvalidMethod();
+            },
+          });
+
+          var queue = new DBQueue(options);
+
+          queue.insert('a queue', { fake: 'job data' }, function(err) {
+            expect(err).to.exist();
+
+            return done();
+          });
+        });
+      });
+
+      context('when deserialization fails', function() {
+        it('yields an error', function(done) {
+          var options = _.extend({}, helper.test_db_config, {
+            serializer: function(data) {
+              return data;
+            },
+          });
+
+          var queue = new DBQueue(options);
+
+          queue.insert('a queue', 'an invalid json string', function(err) {
+            expect(err).to.not.exist();
+
+            db.query('SELECT data FROM jobs', function(err, rows) {
+              expect(err).to.not.exist();
+
+              expect(rows).to.deep.equal([
+                {
+                  data: 'an invalid json string'
+                },
+              ]);
+
+              queue.consume('a queue', function(err, data, ackCallback) {
+                expect(err).to.exist();
+
+                return done();
               });
             });
           });
