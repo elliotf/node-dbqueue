@@ -169,6 +169,22 @@ queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
 });
 ```
 
+## Listening to the queue
+
+```javascript
+var queue_name = 'example queue';
+var options    = {
+  interval:        1000, // milliseconds to wait between polling the queue, defaults to 100
+  max_outstanding: 10,   // maximum un-ack'ed outstanding messages to have, defaults to 1
+};
+
+function consumer(err, message_data, ackMessageCallback) {
+  // the same signature as the `consume` handler above
+}
+
+queue.listen(queue_name, options, consumer);
+```
+
 ## Custom serialization
 
 In case you would like something other than JSON.stringify and JSON.parse for serialization, provide your own serialization methods.

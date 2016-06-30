@@ -466,6 +466,152 @@ describe('DBQueue', function() {
     });
   });
 
+  describe('#listen', function() {
+    var queue;
+    var listen_options;
+
+    beforeEach(function(done) {
+      queue = new DBQueue(helper.test_db_config);
+
+      listen_options  = {
+        interval:        1000,
+        lock_time:       5,
+      };
+
+      var todo = ['a', 'b', 'c', 'd', 'e'];
+      async.map(
+        todo,
+        function(message, done) {
+          return queue.insert('a queue', message, done);
+        },
+        function(err) {
+          expect(err).to.not.exist();
+
+          return done();
+        }
+      );
+    });
+
+    it('consumes messages on an interval', function(done) {
+      this.sinon.stub(queue, 'consume');
+
+      var clock    = this.sinon.useFakeTimers();
+      var consumer = this.sinon.spy();
+
+      queue.listen('a queue', listen_options, consumer);
+      expect(queue.consume).not.to.have.been.called();
+      clock.tick(5);
+      expect(queue.consume).not.to.have.been.called();
+      clock.tick(1000);
+
+      expect(queue.consume).to.have.been.calledOnce();
+      clock.tick(500);
+      expect(queue.consume).to.have.been.calledOnce();
+      clock.tick(1000);
+      expect(queue.consume).to.have.been.calledTwice();
+
+      return done();
+    });
+
+    it('can stop listening', function(done) {
+      this.sinon.stub(queue, 'consume');
+
+      var clock    = this.sinon.useFakeTimers();
+      var consumer = this.sinon.spy();
+
+      var stop = queue.listen('a queue', listen_options, consumer);
+      clock.tick(1500);
+      expect(queue.consume).to.have.been.calledOnce();
+      clock.tick(1000);
+      expect(queue.consume).to.have.been.calledTwice();
+      stop();
+      clock.tick(2000);
+      expect(queue.consume).to.have.been.calledTwice();
+
+      return done();
+    });
+
+    it('passes arguments through to DBQueue#consume', function(done) {
+      this.sinon.stub(queue, 'consume');
+
+      var clock    = this.sinon.useFakeTimers();
+      var consumer = this.sinon.spy();
+
+      var stop = queue.listen('a queue', listen_options, consumer);
+      clock.tick(1500);
+      expect(queue.consume).to.have.been.calledOnce();
+
+      var expected_options = {
+        lock_time: 5,
+        count:     1,
+      };
+
+      expect(queue.consume).to.have.been.calledWith('a queue', expected_options);
+
+      return done();
+    });
+
+    it('the number of messages being processed never exceeds `max_outstanding`', function(done) {
+      var clock         = this.sinon.useFakeTimers();
+
+      var num_processed = 0;
+      function consumer(err, message, ackMessage) {
+        setTimeout(ackMessage, 2000 * ++num_processed);
+      }
+
+      var fakeAckMessage = this.sinon.spy();
+      var num_messages   = 0;
+      var max_messages   = 5;
+      this.sinon.stub(queue, 'consume', function(queue_name, consume_options, done) {
+        if (num_messages++ >= max_messages) {
+          return;
+        }
+        return done(null, 'fake message', fakeAckMessage);
+      });
+
+      var interval      = 1000;
+      var past_interval = interval + 10;
+      listen_options    = {
+        max_outstanding: 2,
+        lock_time:       3000,
+        interval:        interval,
+      };
+      queue.listen('a queue', listen_options, consumer);
+
+      clock.tick(past_interval);
+      expect(queue.consume).to.have.been.calledOnce();
+      expect(queue.consume).to.have.been.calledWith('a queue', { count: 2, lock_time: 3000, });
+      queue.consume.reset();
+
+      clock.tick(100);
+
+      expect(queue.consume).not.to.have.been.called();
+
+      clock.tick(past_interval);
+
+      expect(queue.consume).to.have.been.calledOnce();
+      expect(queue.consume).to.have.been.calledWith('a queue', { count: 1, lock_time: 3000, });
+      queue.consume.reset();
+
+      clock.tick(past_interval);
+
+      expect(fakeAckMessage).to.have.callCount(1);
+
+      expect(queue.consume).not.to.have.been.called();
+
+      clock.tick(3000);
+      expect(fakeAckMessage).to.have.callCount(2);
+
+      clock.tick(4000);
+      expect(fakeAckMessage).to.have.callCount(3);
+
+      clock.tick(30000);
+      expect(fakeAckMessage).to.have.callCount(5);
+
+      return done();
+    });
+  });
+
   describe('#size', function() {
     var queue;
 

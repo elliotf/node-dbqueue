@@ -152,6 +152,42 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
   });
 };
 
+DBQueue.prototype.listen = function(queue_name, options, consumer) {
+  var interval        = 1000;
+  var max_outstanding = options.max_outstanding || 1;
+  var outstanding     = 0;
+
+  var timer = setInterval(function() {
+    var num_to_consume = max_outstanding - outstanding;
+    if (!num_to_consume) {
+      return;
+    }
+    var consume_options = {
+      lock_time: options.lock_time,
+      count:     num_to_consume,
+    };
+
+    this.consume(queue_name, consume_options, function(err, message, ackMessage) {
+      if (err) {
+        return;
+      }
+
+      outstanding++;
+      consumer(null, message, function(err) {
+        ackMessage(err);
+
+        outstanding--;
+      });
+    });
+  }.bind(this), interval);
+
+  function stop() {
+    clearInterval(timer);
+  }
+
+  return stop;
+};
+
 DBQueue.prototype.size = function(queue_input, done) {
   var db    = this.db;
   var table = this.table;
