@@ -101,6 +101,12 @@ DBQueue.prototype.consume = function(queue_input, done) {
           return done(err);
         }
 
+        if (!rows.length) {
+          // not tested, but a potential race condition due to replication latency in multi-master setup
+          // let's avoid an uncaught exception when we try to pull .data off of undefined
+          return done();
+        }
+
         var job = rows[0];
 
         function finishedWithJob(err, done) {
