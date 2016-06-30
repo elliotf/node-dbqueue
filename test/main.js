@@ -201,9 +201,9 @@ describe('DBQueue', function() {
 
             expect(finished).to.be.a('function');
 
-            finished(null, function(err) {
-              expect(err).to.not.exist();
+            finished(null);
 
+            setTimeout(function() {
               db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
                 expect(err).to.not.exist();
 
@@ -211,7 +211,7 @@ describe('DBQueue', function() {
 
                 return done();
               });
-            });
+            }, 10);
           });
         });
 
@@ -224,7 +224,9 @@ describe('DBQueue', function() {
 
               finished();
 
-              finished(null, function(err) {
+              finished();
+
+              setTimeout(function(err) {
                 expect(err).to.not.exist();
 
                 db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
@@ -234,7 +236,7 @@ describe('DBQueue', function() {
 
                   return done();
                 });
-              });
+              }, 10);
             });
           });
         });
@@ -244,7 +246,8 @@ describe('DBQueue', function() {
             queue.consume('queue_a', function(err, job, finishedWithJob) {
               expect(err).to.not.exist();
 
-              finishedWithJob(new Error('fake error'), function(err) {
+              finishedWithJob(new Error('fake error'));
+              setTimeout(function(err) {
                 expect(err).to.not.exist();
 
                 db.query('SELECT * FROM jobs WHERE queue = ?', ['queue_a'], function(err, rows) {
@@ -254,7 +257,7 @@ describe('DBQueue', function() {
 
                   return done();
                 });
-              });
+              },10);
             });
           });
         });
@@ -276,7 +279,7 @@ describe('DBQueue', function() {
 
                   return done();
                 });
-              }, 50);
+              }, 10);
             });
           });
         });

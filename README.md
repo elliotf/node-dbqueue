@@ -164,10 +164,7 @@ queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
   // if the ackMessageCallback is not called, the message is left on the queue
 
   doSomethingWithMessage(message_data, function(err) {
-    ackMessageCallback(err, function(err) {
-      // handle potential error
-      // callback to message ACK is optional, in case confirmation of message removal from queue is desired
-    });
+    ackMessageCallback(err);
   });
 });
 ```

@@ -54,21 +54,10 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
   });
 };
 
-DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
-  var db        = this.db;
-  var table     = this.table;
+function reserveJobs(queue, queue_input, options, done) {
+  var db        = queue.db;
+  var table     = queue.table;
   var worker_id = uuid.v4();
-  var self      = this;
-
-  var options;
-  var done;
-  if (options_input && (typeof done_input === 'function')) {
-    options = options_input;
-    done    = done_input;
-  } else {
-    options = {};
-    done    = options_input;
-  }
 
   var lock_time = options.lock_time || (60 * 5);
   var limit     = options.count     || 1;
@@ -108,50 +97,57 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
         + " AND locked_until = ?"
         ;
 
-      db.query(find_reserved_jobs_sql, [table, worker_id, lock_until], function(err, rows) {
+      return db.query(find_reserved_jobs_sql, [table, worker_id, lock_until], done);
+    });
+  });
+}
+
+DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
+  var db   = this.db;
+  var self = this;
+
+  var options;
+  var done;
+  if (options_input && (typeof done_input === 'function')) {
+    options = options_input;
+    done    = done_input;
+  } else {
+    options = {};
+    done    = options_input;
+  }
+
+  reserveJobs(this, queue_input, options, function(err, rows) {
+    if (err) {
+      return done(err);
+    }
+
+    if (!rows || !rows.length) {
+      // not tested, but a potential race condition due to replication latency in multi-master setup
+      // let's avoid an uncaught exception when we try to pull .data off of undefined
+      return done();
+    }
+
+    rows.map(function(job) {
+      function finishedWithJob(err) {
         if (err) {
-          return done(err);
+          return;
         }
 
-        if (!rows.length) {
-          // not tested, but a potential race condition due to replication latency in multi-master setup
-          // let's avoid an uncaught exception when we try to pull .data off of undefined
-          return done();
-        }
-
-        rows.map(function(job) {
-          function finishedWithJob(err, done) {
-            if (!(done instanceof Function)) {
-              done = function() {};
-            }
-
-            if (err) {
-              return done();
-            }
-
-            var remove_job_sql = ""
-              + " DELETE FROM jobs"
-              + " WHERE id = ?"
-              ;
-            db.query(remove_job_sql, [job.id], function(err, result) {
-              if (err) {
-                return done(err);
-              }
-
-              done();
-            });
+        db.query("DELETE FROM jobs WHERE id = ?", [job.id], function(err, result) {
+          if (err) {
+            console.error('Error acking message:', err, err.stack);
           }
-
-          var to_return;
-          try {
-            to_return = self.deserializer(job.data);
-          } catch(e) {
-            return done(e);
-          }
-
-          return done(null, to_return, finishedWithJob);
         });
-      });
+      }
+
+      var to_return;
+      try {
+        to_return = self.deserializer(job.data);
+      } catch(e) {
+        return done(e);
+      }
+
+      return done(null, to_return, finishedWithJob);
     });
   });
 };
