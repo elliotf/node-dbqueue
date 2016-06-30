@@ -172,6 +172,10 @@ DBQueue.prototype.listen = function(queue_name, options, consumer) {
         return;
       }
 
+      if (!message) {
+        return;
+      }
+
       outstanding++;
       consumer(null, message, function(err) {
         ackMessage(err);

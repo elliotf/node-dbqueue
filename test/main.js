@@ -610,6 +610,30 @@ describe('DBQueue', function() {
 
       return done();
     });
+
+    context('when there are no messages', function() {
+      it('does not call the consumer', function(done) {
+        var clock    = this.sinon.useFakeTimers();
+        var consumer = this.sinon.spy();
+
+        this.sinon.stub(queue, 'consume', function(queue_name, consume_options, done) {
+          return done();
+        });
+
+        listen_options    = {
+          max_outstanding: 2,
+          lock_time:       3000,
+          interval:        100,
+        };
+         queue.listen('an empty queue', listen_options, consumer);
+
+         clock.tick(30000);
+
+         expect(consumer).to.have.callCount(0);
+
+         return done();
+      });
+    });
   });
 
   describe('#size', function() {
