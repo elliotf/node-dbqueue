@@ -139,7 +139,7 @@ describe('DBQueue', function() {
         });
       });
 
-      it('gives a job out only once', function(done) {
+      it('gives a job out no more than once', function(done) {
         queue.consume('queue_a', function(err, job) {
           expect(err).to.not.exist();
 
@@ -435,7 +435,7 @@ describe('DBQueue', function() {
   });
 
   describe('integration tests', function() {
-    describe('custom table name', function() {
+    describe('custom table name support', function() {
       var queue;
 
       beforeEach(function(done) {
