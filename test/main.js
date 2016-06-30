@@ -2,7 +2,6 @@
 
 var _       = require('lodash');
 var async   = require('async');
-var msgpack = require('msgpack');
 var yaml    = require('js-yaml');
 var uuid    = require('uuid');
 var helper  = require('./helper.js');
@@ -592,31 +591,6 @@ describe('DBQueue', function() {
                   data: 'an invalid json string'
                 },
               ]);
-
-              queue.consume('a queue', function(err, data, ackCallback) {
-                expect(err).to.exist();
-
-                return done();
-              });
-            });
-          });
-        });
-      });
-
-      context('when the serialization format is binary', function() {
-        it('yields an error', function(done) {
-          var options = _.extend({}, helper.test_db_config, {
-            serializer:   msgpack.pack,
-            deserializer: msgpack.unpack,
-          });
-
-          var queue = new DBQueue(options);
-
-          queue.insert('a queue', { fake: 'job data' }, function(err) {
-            expect(err).to.not.exist();
-
-            db.query('SELECT data FROM jobs', function(err, rows) {
-              expect(err).to.not.exist();
 
               queue.consume('a queue', function(err, data, ackCallback) {
                 expect(err).to.exist();
