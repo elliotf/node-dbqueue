@@ -1,6 +1,6 @@
 {
   "name": "dbqueue",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A minimal, durable DB-based message queue system",
   "homepage": "https://github.com/elliotf/node-dbqueue",
   "main": "main.js",
