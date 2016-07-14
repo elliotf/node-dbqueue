@@ -755,7 +755,15 @@ describe('DBQueue', function() {
                     expect(job).to.exist();
                     expect(job).to.equal('fake data for custom table queue');
 
-                    return done();
+                    completionCallback(null);
+                    setTimeout(function () {
+                      db.query('SELECT * FROM custom_jobs_table', function(err, rows) {
+                        expect(err).to.not.exist();
+                        expect(rows).to.have.length(0);
+                        return done();
+                      });
+                    }, 10);
+
                   });
                 });
               });
