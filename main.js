@@ -103,8 +103,9 @@ function reserveJobs(queue, queue_input, options, done) {
 }
 
 DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
-  var db   = this.db;
-  var self = this;
+  var db    = this.db;
+  var table = this.table;
+  var self  = this;
 
   var options;
   var done;
@@ -133,7 +134,7 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
           return;
         }
 
-        db.query("DELETE FROM jobs WHERE id = ?", [job.id], function(err, result) {
+        db.query("DELETE FROM ?? WHERE id = ?", [table, job.id], function(err, result) {
           if (err) {
             console.error('Error acking message:', err, err.stack);
           }
