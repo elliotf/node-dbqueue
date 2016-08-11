@@ -28,6 +28,38 @@ describe('DBQueue', function() {
         return done();
       });
     });
+
+    context('when the database port is invalid', function() {
+      it('yields an error rather than throw an exception', function(done) {
+        var config = _.extend({}, helper.test_db_config, {
+          port: 10,
+        });
+
+        DBQueue.connect(config, function(err, queue) {
+          expect(err).to.exist();
+
+          expect(err.code).to.equal('ECONNREFUSED');
+
+          return done();
+        });
+      });
+    });
+
+    context('when the database hostname is invalid', function() {
+      it('yields an error rather than throw an exception', function(done) {
+        var config = _.extend({}, helper.test_db_config, {
+          host: 'fake-domain-here.example',
+        });
+
+        DBQueue.connect(config, function(err, queue) {
+          expect(err).to.exist();
+
+          expect(err.code).to.equal('ENOTFOUND');
+
+          return done();
+        });
+      });
+    });
   });
 
   describe('#insert', function() {
@@ -83,6 +115,22 @@ describe('DBQueue', function() {
 
             return done();
           });
+        });
+      });
+    });
+
+    context('when the database port is invalid', function() {
+      it('yields an error rather than throw an exception', function(done) {
+        var config = _.extend({}, helper.test_db_config, {
+          port: 10,
+        });
+
+        queue = new DBQueue(config);
+
+        queue.insert('queue name', 'fake message', function(err) {
+          expect(err).to.exist();
+
+          return done();
         });
       });
     });

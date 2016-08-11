@@ -21,7 +21,7 @@ function DBQueue(attrs) {
 DBQueue.connect = function(options, done) {
   var queue   = new DBQueue(options);
 
-  queue.db.query("SELECT NOW()", function(err, result) {
+  queue.query("SELECT NOW()", [], function(err, result) {
     if (err) {
       return done(err);
     }
@@ -30,9 +30,26 @@ DBQueue.connect = function(options, done) {
   });
 };
 
+DBQueue.prototype.query = function(sql, bindings, done) {
+  return this.db.getConnection(function(err, connection) {
+    if (err) {
+      return done(err);
+    }
+
+    connection.query(sql, bindings, function(err, results) {
+      connection.release();
+
+      if (err) {
+        return done(err);
+      }
+
+      return done(err, results);
+    });
+  });
+};
+
 DBQueue.prototype.insert = function(queue_name, data, done) {
   var self  = this;
-  var db    = this.db;
   var table = this.table;
 
   var to_store;
@@ -45,7 +62,7 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
     + " INSERT INTO ?? (queue, data, worker, create_time, update_time)"
     + " VALUES (?, ?, 'unassigned', NOW(), NOW())"
     ;
-  db.query(sql, [table, queue_name, to_store], function(err, rows, fields) {
+  this.query(sql, [table, queue_name, to_store], function(err, rows, fields) {
     if (err) {
       return done(err);
     }
@@ -55,14 +72,14 @@ DBQueue.prototype.insert = function(queue_name, data, done) {
 };
 
 function reserveJobs(queue, queue_input, options, done) {
-  var db        = queue.db;
+  var self      = queue;
   var table     = queue.table;
   var worker_id = uuid.v4();
 
   var lock_time = options.lock_time || (60 * 5);
   var limit     = options.count     || 1;
 
-  db.query("SELECT NOW() AS now, NOW() + INTERVAL ? SECOND AS lock_until", [lock_time], function(err, result) {
+  self.query("SELECT NOW() AS now, NOW() + INTERVAL ? SECOND AS lock_until", [lock_time], function(err, result) {
     if (err) {
       return done(err);
     }
@@ -81,7 +98,7 @@ function reserveJobs(queue, queue_input, options, done) {
       + " LIMIT ?"
       ;
 
-    db.query(reserve_jobs_sql, [table, worker_id, lock_until, now, now, queue_input, limit], function(err, result) {
+    self.query(reserve_jobs_sql, [table, worker_id, lock_until, now, now, queue_input, limit], function(err, result) {
       if (err) {
         return done(err);
       }
@@ -97,13 +114,12 @@ function reserveJobs(queue, queue_input, options, done) {
         + " AND locked_until = ?"
         ;
 
-      return db.query(find_reserved_jobs_sql, [table, worker_id, lock_until], done);
+      return self.query(find_reserved_jobs_sql, [table, worker_id, lock_until], done);
     });
   });
 }
 
 DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
-  var db    = this.db;
   var table = this.table;
   var self  = this;
 
@@ -128,13 +144,13 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
       return done();
     }
 
-    rows.map(function(job) {
+    rows.forEach(function(job) {
       function finishedWithJob(err) {
         if (err) {
           return;
         }
 
-        db.query("DELETE FROM ?? WHERE id = ?", [table, job.id], function(err, result) {
+        self.query("DELETE FROM ?? WHERE id = ?", [table, job.id], function(err, result) {
           if (err) {
             console.error('Error acking message:', err, err.stack);
           }
@@ -194,7 +210,6 @@ DBQueue.prototype.listen = function(queue_name, options, consumer) {
 };
 
 DBQueue.prototype.size = function(queue_input, done) {
-  var db    = this.db;
   var table = this.table;
 
   var total_jobs_sql = ""
@@ -202,7 +217,7 @@ DBQueue.prototype.size = function(queue_input, done) {
     + " FROM ??"
     + " WHERE queue IN (?)"
     ;
-  db.query(total_jobs_sql, [table, queue_input], function(err, rows) {
+  this.query(total_jobs_sql, [table, queue_input], function(err, rows) {
     if (err) {
       return done(err);
     }
