@@ -517,6 +517,7 @@ describe('DBQueue', function() {
   describe('#listen', function() {
     var queue;
     var listen_options;
+    var consumer;
 
     beforeEach(function(done) {
       queue = new DBQueue(helper.test_db_config);
@@ -525,6 +526,8 @@ describe('DBQueue', function() {
         interval:        1000,
         lock_time:       5,
       };
+
+      consumer = this.sinon.spy();
 
       var todo = ['a', 'b', 'c', 'd', 'e'];
       async.map(
@@ -544,7 +547,6 @@ describe('DBQueue', function() {
       this.sinon.stub(queue, 'consume');
 
       var clock    = this.sinon.useFakeTimers();
-      var consumer = this.sinon.spy();
 
       queue.listen('a queue', listen_options, consumer);
       expect(queue.consume).not.to.have.been.called();
@@ -565,7 +567,6 @@ describe('DBQueue', function() {
       this.sinon.stub(queue, 'consume');
 
       var clock    = this.sinon.useFakeTimers();
-      var consumer = this.sinon.spy();
 
       var stop = queue.listen('a queue', listen_options, consumer);
       clock.tick(1500);
@@ -583,7 +584,6 @@ describe('DBQueue', function() {
       this.sinon.stub(queue, 'consume');
 
       var clock    = this.sinon.useFakeTimers();
-      var consumer = this.sinon.spy();
 
       var stop = queue.listen('a queue', listen_options, consumer);
       clock.tick(1500);
@@ -657,6 +657,32 @@ describe('DBQueue', function() {
       expect(fakeAckMessage).to.have.callCount(5);
 
       return done();
+    });
+
+    context('when options.interval is provided', function() {
+      it('checks for new messages every <interval> milliseconds', function(done) {
+        var clock    = this.sinon.useFakeTimers();
+        var consumer = this.sinon.spy();
+        var interval = 100;
+
+        this.sinon.spy(queue, 'consume');
+
+        listen_options    = {
+          max_outstanding: 100,
+          lock_time:       3000,
+          interval:        interval,
+        };
+
+        queue.listen('a queue', listen_options, consumer);
+
+        expect(queue.consume).to.have.callCount(0);
+
+        clock.tick(12*interval + 10);
+
+        expect(queue.consume).to.have.callCount(12);
+
+        return done();
+      });
     });
 
     context('when there are no messages', function() {

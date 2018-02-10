@@ -174,7 +174,7 @@ queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
 ```javascript
 var queue_name = 'example queue';
 var options    = {
-  interval:        1000, // milliseconds to wait between polling the queue, defaults to 100
+  interval:        1000, // milliseconds to wait between polling the queue, defaults to 1000
   max_outstanding: 10,   // maximum un-ack'ed outstanding messages to have, defaults to 1
 };
 

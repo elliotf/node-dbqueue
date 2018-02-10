@@ -170,7 +170,7 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
 };
 
 DBQueue.prototype.listen = function(queue_name, options, consumer) {
-  var interval        = 1000;
+  var interval        = options.interval        || 1000;
   var max_outstanding = options.max_outstanding || 1;
   var outstanding     = 0;
 
