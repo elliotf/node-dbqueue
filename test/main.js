@@ -659,6 +659,44 @@ describe('DBQueue', function() {
       return done();
     });
 
+    context('when provided a max_jobs_per_interval', function() {
+      var listen_options;
+      var interval;
+
+      beforeEach(function() {
+        interval = 500;
+
+        listen_options = {
+          max_outstanding:        4,
+          max_jobs_per_interval:  3,
+          lock_time:              60000,
+          interval:               interval,
+        };
+      });
+
+      it('will fetch only up to that many jobs at a time', function(done) {
+        this.sinon.stub(queue, 'consume');
+
+        var consumer = this.sinon.spy();
+
+        var clock = this.sinon.useFakeTimers();
+
+        queue.listen('a queue', listen_options, consumer);
+
+        expect(queue.consume).to.have.callCount(0);
+
+        clock.tick(interval + 10);
+
+        expect(queue.consume).to.have.callCount(1);
+        expect(queue.consume.args[0][1]).to.deep.equal({
+          count:     3,
+          lock_time: 60000,
+        });
+
+        done();
+      });
+    });
+
     context('when options.interval is provided', function() {
       it('checks for new messages every <interval> milliseconds', function(done) {
         var clock    = this.sinon.useFakeTimers();

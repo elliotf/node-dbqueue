@@ -172,13 +172,20 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
 DBQueue.prototype.listen = function(queue_name, options, consumer) {
   var interval        = options.interval        || 1000;
   var max_outstanding = options.max_outstanding || 1;
+  var max_at_a_time   = options.max_jobs_per_interval || 0;
   var outstanding     = 0;
 
   var timer = setInterval(function() {
     var num_to_consume = max_outstanding - outstanding;
+
     if (!num_to_consume) {
       return;
     }
+
+    if (max_at_a_time) {
+      num_to_consume = Math.min(num_to_consume, max_at_a_time);
+    }
+
     var consume_options = {
       lock_time: options.lock_time,
       count:     num_to_consume,

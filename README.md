@@ -172,10 +172,32 @@ queue.consume(queue_name, function(err, message_data, ackMessageCallback) {
 ## Listening to the queue
 
 ```javascript
-var queue_name = 'example queue';
+var queue_name = 'default queue configuration';
 var options    = {
   interval:        1000, // milliseconds to wait between polling the queue, defaults to 1000
-  max_outstanding: 10,   // maximum un-ack'ed outstanding messages to have, defaults to 1
+  max_outstanding: 1,    // maximum un-ack'ed outstanding messages to have, defaults to 1
+  max_jobs_per_interval: 0, // maximum number of messages to consume per interval, defaults to 0
+                            // if set to 0, there is no limit per-interval, but max_outstanding
+                            // is still enforced
+};
+
+function consumer(err, message_data, ackMessageCallback) {
+  // the same signature as the `consume` handler above
+}
+
+queue.listen(queue_name, options, consumer);
+```
+
+## Example rate-limited consumer for slow jobs
+Consume at a steady rate of ~4 messages/sec, up to 10,000 jobs in flight.
+
+```javascript
+var queue_name = 'slow job queue with high concurrency';
+var options    = {
+  interval:              500,   // check for jobs twice a second
+  max_jobs_per_interval: 2,
+  max_outstanding:       10000,
+  lock_time:             10*60, // jobs take a while, so lock for longer
 };
 
 function consumer(err, message_data, ackMessageCallback) {
