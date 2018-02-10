@@ -9,7 +9,7 @@
     "url": "git://github.com/elliotf/node-dbqueue.git"
   },
   "scripts": {
-    "test": "NODE_ENV=test mocha --check-leaks --recursive test"
+    "test": "NODE_ENV=test mocha -r mocha-clean --check-leaks --recursive test"
   },
   "keywords": [
     "database",
@@ -32,6 +32,7 @@
     "js-yaml": "^3.6.1",
     "lodash": "^4.6.1",
     "mocha": "^2.4.5",
+    "mocha-clean": "^1.0.0",
     "mocha-sinon": "^1.1.5",
     "nodemon": "^1.9.1",
     "sinon": "^1.17.3",
