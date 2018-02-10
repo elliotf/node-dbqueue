@@ -280,7 +280,7 @@ describe('DBQueue', function() {
                 db.query("SELECT * FROM jobs WHERE queue='queue_a'", [], function(err, rows) {
                   expect(err).to.not.exist();
 
-                  expect(rows).to.have.length(0);
+                  expect(rows).to.deep.equal([]);
 
                   return done();
                 });
@@ -737,13 +737,14 @@ describe('DBQueue', function() {
           lock_time:       3000,
           interval:        100,
         };
-         queue.listen('an empty queue', listen_options, consumer);
 
-         clock.tick(30000);
+        queue.listen('an empty queue', listen_options, consumer);
 
-         expect(consumer).to.have.callCount(0);
+        clock.tick(30000);
 
-         return done();
+        expect(consumer).to.have.callCount(0);
+
+        return done();
       });
     });
   });
