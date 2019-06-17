@@ -295,7 +295,7 @@ describe('DBQueue', function() {
           });
 
           context('when the persist_last_error option has been specified', function() {
-            beforeEach(async function(done) {
+            beforeEach(function(done) {
               var custom_config = _.extend({}, helper.test_db_config, {
                 persist_last_error: true,
               });
