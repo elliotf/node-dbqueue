@@ -44,22 +44,6 @@ describe('DBQueue', function() {
         });
       });
     });
-
-    context('when the database hostname is invalid', function() {
-      it('yields an error rather than throw an exception', function(done) {
-        var config = _.extend({}, helper.test_db_config, {
-          host: 'fake-domain-here.example',
-        });
-
-        DBQueue.connect(config, function(err, queue) {
-          expect(err).to.exist();
-
-          expect(err.code).to.equal('ENOTFOUND');
-
-          return done();
-        });
-      });
-    });
   });
 
   describe('#insert', function() {
@@ -87,6 +71,7 @@ describe('DBQueue', function() {
           expect(actual).to.deep.equal([
             {
               data:          '{"example":"message data"}',
+              last_error:    null,
               queue:         'waffles',
               worker:        'unassigned',
             }
@@ -306,6 +291,45 @@ describe('DBQueue', function() {
                   return done();
                 });
               },10);
+            });
+          });
+
+          context('when the persist_last_error option has been specified', function() {
+            beforeEach(async function(done) {
+              var custom_config = _.extend({}, helper.test_db_config, {
+                persist_last_error: true,
+              });
+
+              DBQueue.connect(custom_config, function(err, result) {
+                expect(err).to.not.exist();
+
+                queue = result;
+
+                return done();
+              });
+            });
+
+            it('should store that error in the `last_error` column', function(done) {
+              queue.consume('queue_a', function(err, job, finishedWithJob) {
+                expect(err).to.not.exist();
+
+                finishedWithJob(new Error('fake error'));
+                setTimeout(function(err) {
+                  expect(err).to.not.exist();
+
+                  db.query('SELECT last_error FROM jobs WHERE queue = ?', ['queue_a'], function(err, rows) {
+                    expect(err).to.not.exist();
+
+                    expect(rows).to.deep.equal([
+                      {
+                        last_error: 'Error: fake error',
+                      },
+                    ]);
+
+                    return done();
+                  });
+                },10);
+              });
             });
           });
         });
