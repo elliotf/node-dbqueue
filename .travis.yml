@@ -9,7 +9,10 @@ node_js:
   - 'lts/*'
 
 before_script:
-  - mysql -e 'create database dbqueue_testing_db;'
+  - mysql -uroot -e 'create database dbqueue_testing_db;'
+
+services:
+  - mysql
 
 matrix:
   fast_finish: true

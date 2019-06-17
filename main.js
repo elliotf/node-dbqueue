@@ -9,6 +9,7 @@ function DBQueue(attrs) {
 
   this.serializer   = attrs.serializer   || JSON.stringify;
   this.deserializer = attrs.deserializer || JSON.parse;
+  this.persist_last_error = attrs.persist_last_error || false;
 
   var pool = mysql.createPool(attrs);
   pool.on('connection', function(conn) {
@@ -147,7 +148,15 @@ DBQueue.prototype.consume = function(queue_input, options_input, done_input) {
     rows.forEach(function(job) {
       function finishedWithJob(err) {
         if (err) {
-          return;
+          if (!self.persist_last_error) {
+            return;
+          }
+
+          return self.query("UPDATE ?? SET last_error = ? WHERE id = ?", [table, (err || '').toString(), job.id], function(err, result) {
+            if (err) {
+              console.error('Error recording last_error:', err, err.stack);
+            }
+          });
         }
 
         self.query("DELETE FROM ?? WHERE id = ?", [table, job.id], function(err, result) {
