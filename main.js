@@ -11,6 +11,7 @@ function DBQueue(attrs) {
   this.deserializer = attrs.deserializer || JSON.parse;
   this.persist_last_error = attrs.persist_last_error || false;
 
+  delete attrs.table_name;
   var pool = mysql.createPool(attrs);
   pool.on('connection', function(conn) {
     conn.query('SET sql_mode="STRICT_ALL_TABLES"', [])
@@ -20,7 +21,7 @@ function DBQueue(attrs) {
 }
 
 DBQueue.connect = function(options, done) {
-  var queue   = new DBQueue(options);
+  var queue = new DBQueue(options);
 
   queue.query("SELECT NOW()", [], function(err, result) {
     if (err) {
