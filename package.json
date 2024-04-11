@@ -21,7 +21,7 @@
     "message bus"
   ],
   "dependencies": {
-    "mysql2": "^1.0.0-rc.5",
+    "mysql2": "^3.9.4",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
@@ -31,10 +31,10 @@
     "dirty-chai": "^1.2.2",
     "js-yaml": "^3.6.1",
     "lodash": "^4.6.1",
-    "mocha": "^2.4.5",
+    "mocha": "^10.4.0",
     "mocha-clean": "^1.0.0",
     "mocha-sinon": "^1.1.5",
-    "nodemon": "^1.9.1",
+    "nodemon": "^3.1.0",
     "sinon": "^1.17.3",
     "sinon-chai": "^2.8.0"
   },
