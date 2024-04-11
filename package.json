@@ -21,7 +21,7 @@
     "message bus"
   ],
   "dependencies": {
-    "mysql2": "^1.0.0-rc.5",
+    "mysql2": "^3.9.4",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
